@@ -38,6 +38,12 @@
 #include "Edit.h"
 #include "Styles.h"
 #include "Dialogs.h"
+#include "ConfigBackup.h"
+#include "ConfigAutoBackup.h"
+#include "ConfigCloud.h"
+#include "ConfigCloudAuto.h"
+#include "ConfigManager.h"
+#include "ConfigRestore.h"
 #include "resource.h"
 
 //! show code folding level and state on line number margin
@@ -644,8 +650,14 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
 #endif
 	Scintilla_RegisterClasses(hInstance);
 
+	ConfigRestore_RecoverPendingTransaction();
+
 	// Load Settings
 	LoadSettings();
+	ConfigCloud_CleanupTemporaryFiles();
+	ConfigAutoBackup_MigrateLegacyBackups();
+	ConfigAutoBackup_MaybeRun(nullptr, nullptr);
+	ConfigCloudAuto_MaybeRunAsync();
 	DarkMode_Init();
 
 	if (!InitApplication(hInstance)) {
@@ -1086,11 +1098,43 @@ static inline bool IsFileStartsWithDotLog() noexcept {
 }
 #endif
 
+static bool bSkipSettingsSaveOnExit = false;
+
+void PrepareSettingsRestartAfterRestore() noexcept {
+	bSkipSettingsSaveOnExit = true;
+}
+
 static void SaveAllSettings(bool destroy) noexcept {
+	if (bSkipSettingsSaveOnExit) {
+		if (destroy) {
+			mruFile.Empty(false, true);
+			mruFind.Empty(false, true);
+			mruReplace.Empty(false, true);
+		}
+		return;
+	}
 	SaveSettings(false);
 	mruFile.MergeSave(bSaveRecentFiles, destroy);
 	mruFind.MergeSave(bSaveFindReplace, destroy);
 	mruReplace.MergeSave(bSaveFindReplace, destroy);
+	if (bSaveSettings) {
+		ConfigAutoBackup_MaybeRun(nullptr, nullptr);
+	}
+	if (destroy) {
+		ConfigCloudAuto_ShutdownAsync();
+	}
+}
+
+void SaveHistoryForBackup() noexcept {
+	if (bSaveRecentFiles && mruFile.Initialized()) {
+		mruFile.Save();
+	}
+	if (bSaveFindReplace && mruFind.Initialized()) {
+		mruFind.Save();
+	}
+	if (bSaveFindReplace && mruReplace.Initialized()) {
+		mruReplace.Save();
+	}
 }
 
 //=============================================================================
@@ -1100,6 +1144,50 @@ static void SaveAllSettings(bool destroy) noexcept {
 // Messages are distributed to the MsgXXX-handlers
 //
 //
+// Synchronize the Windows title bar with the current editor theme
+static void ApplyWindowChromeTheme(HWND hwnd) noexcept {
+    ThemeChrome_Apply(hwnd, hwndToolbar, hwndReBar, hwndStatus);
+	HMODULE module = LoadLibraryExW(L"dwmapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+	if (module == nullptr) { return; }
+	using SetDwmAttribute = HRESULT (WINAPI *)(HWND, DWORD, LPCVOID, DWORD);
+	const auto setAttribute = reinterpret_cast<SetDwmAttribute>(GetProcAddress(module, "DwmSetWindowAttribute"));
+	if (setAttribute != nullptr) {
+		const BOOL dark = (np2StyleTheme == StyleTheme_Dark || np2StyleTheme == StyleTheme_TangoWarmDark || np2StyleTheme == StyleTheme_GruvboxDark);
+		if (FAILED(setAttribute(hwnd, 20, &dark, sizeof(dark)))) {
+			setAttribute(hwnd, 19, &dark, sizeof(dark)); // Older Windows 10 revisions
+		}
+		COLORREF caption = 0xFFFFFFFF; // DWM 默认值：保留官方浅色标题栏
+		COLORREF titleText = 0xFFFFFFFF;
+		switch (np2StyleTheme) {
+		case StyleTheme_Dark:
+			caption = RGB(0x1E, 0x1E, 0x1E);
+			titleText = RGB(0xD4, 0xD4, 0xD4);
+			break;
+		case StyleTheme_SolarizedLight:
+			caption = RGB(0xFD, 0xF6, 0xE3);
+			titleText = RGB(0x58, 0x6E, 0x75);
+			break;
+		case StyleTheme_TangoWarmDark:
+			caption = RGB(0x24, 0x21, 0x1E);
+			titleText = RGB(0xE2, 0xD8, 0xC3);
+			break;
+		case StyleTheme_GruvboxDark:
+			caption = RGB(0x28, 0x28, 0x28);
+			titleText = RGB(0xEB, 0xDB, 0xB2);
+			break;
+		case StyleTheme_GruvboxLight:
+			caption = RGB(0xFB, 0xF1, 0xC7);
+			titleText = RGB(0x3C, 0x38, 0x36);
+			break;
+		default: break;
+		}
+		setAttribute(hwnd, 35, &caption, sizeof(caption)); // DWMWA_CAPTION_COLOR (Win11)
+		setAttribute(hwnd, 36, &titleText, sizeof(titleText)); // DWMWA_TEXT_COLOR (Win11)
+		setAttribute(hwnd, 34, &caption, sizeof(caption)); // DWMWA_BORDER_COLOR (Win11)
+	}
+	FreeLibrary(module);
+}
+
 LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam) {
 	static bool bShutdownOK;
 
@@ -1129,8 +1217,11 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam)
 		return DefWindowProc(hwnd, umsg, wParam, lParam);
 	}
 
-	case WM_CREATE:
-		return MsgCreate(hwnd, wParam, lParam);
+	case WM_CREATE: {
+		const LRESULT result = MsgCreate(hwnd, wParam, lParam);
+		if (result == 0) { ApplyWindowChromeTheme(hwnd); }
+		return result;
+	}
 
 	case WM_DESTROY:
 	case WM_ENDSESSION:
@@ -1195,10 +1286,12 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam)
 	case WM_THEMECHANGED:
 		// Reinitialize theme-dependent values and resize windows
 		MsgThemeChanged(hwnd, wParam, lParam);
+		ApplyWindowChromeTheme(hwnd);
 		break;
 
 	case WM_DPICHANGED:
 		MsgDPIChanged(hwnd, wParam, lParam);
+		ApplyWindowChromeTheme(hwnd);
 		break;
 
 	case WM_SETTINGCHANGE:
@@ -1206,6 +1299,7 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam)
 		// TODO: detect system theme and high contrast mode changes
 		SendMessage(hwndEdit, WM_SETTINGCHANGE, wParam, lParam);
 		Style_SetLexer(pLexCurrent, false); // override base elements
+		ApplyWindowChromeTheme(hwnd);
 		break;
 
 	case WM_SYSCOLORCHANGE:
@@ -1213,6 +1307,7 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam)
 		SendMessage(hwndToolbar, WM_SYSCOLORCHANGE, wParam, lParam);
 		SendMessage(hwndEdit, WM_SYSCOLORCHANGE, wParam, lParam);
 		Style_SetLexer(pLexCurrent, false); // override base elements
+		ApplyWindowChromeTheme(hwnd);
 		break;
 
 	case WM_TIMER:
@@ -1352,6 +1447,18 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam)
 	}
 	return TRUE;
 
+	case WM_DRAWITEM:
+		if (ThemeChrome_HandleDraw(wParam, lParam)) { return TRUE; }
+		return DefWindowProc(hwnd, umsg, wParam, lParam);
+
+	case WM_MEASUREITEM:
+		if (ThemeChrome_HandleMeasure(lParam)) { return TRUE; }
+		return DefWindowProc(hwnd, umsg, wParam, lParam);
+
+	case WM_MENUCHAR:
+		if (ThemeChrome_IsEnabled()) { return ThemeChrome_HandleMenuChar(wParam, lParam); }
+		return DefWindowProc(hwnd, umsg, wParam, lParam);
+
 	case WM_CONTEXTMENU: {
 		const int nID = GetWinCtrlID(AsPointer<HWND>(wParam));
 
@@ -1402,6 +1509,11 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam)
 
 	case WM_INITMENU:
 		MsgInitMenu(hwnd, wParam, lParam);
+		ThemeChrome_ApplyMenu(reinterpret_cast<HMENU>(wParam));
+		break;
+
+	case WM_INITMENUPOPUP:
+		ThemeChrome_ApplyMenu(reinterpret_cast<HMENU>(wParam));
 		break;
 
 	case WM_ENTERMENULOOP:
@@ -1981,6 +2093,7 @@ void CreateBars(HWND hwnd, HINSTANCE hInstance) noexcept {
 	GetString(IDS_STATUSITEM_FORMAT, cachedStatusItem.tchItemFormat, COUNTOF(cachedStatusItem.tchItemFormat));
 	const DWORD dwStatusbarStyle = bShowStatusbar ? (WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE) : (WS_CHILD | WS_CLIPSIBLINGS);
 	hwndStatus = CreateStatusWindow(dwStatusbarStyle, nullptr, hwnd, IDC_STATUSBAR);
+    ThemeChrome_AttachStatus(hwndStatus);
 
 	// Create ReBar and add Toolbar
 	const DWORD dwReBarStyle = bShowToolbar ? (WS_REBAR | WS_VISIBLE) : WS_REBAR;
@@ -2023,6 +2136,7 @@ void RecreateBars(HWND hwnd, HINSTANCE hInstance) noexcept {
 	DestroyWindow(hwndReBar);
 	DestroyWindow(hwndStatus);
 	CreateBars(hwnd, hInstance);
+	ThemeChrome_Apply(hwnd, hwndToolbar, hwndReBar, hwndStatus);
 }
 
 //=============================================================================
@@ -2508,8 +2622,12 @@ void MsgInitMenu(HWND hwnd, WPARAM wParam, LPARAM lParam) noexcept {
 
 	CheckCmd(hmenu, IDM_VIEW_SHOW_FOLDING, bShowCodeFolding);
 	CheckCmd(hmenu, IDM_VIEW_USEDEFAULT_CODESTYLE, pLexCurrent->bUseDefaultCodeStyle);
-	i = IDM_VIEW_STYLE_THEME_DEFAULT + np2StyleTheme;
-	CheckMenuRadioItem(hmenu, IDM_VIEW_STYLE_THEME_DEFAULT, IDM_VIEW_STYLE_THEME_DARK, i, MF_BYCOMMAND);
+	CheckCmd(hmenu, IDM_VIEW_STYLE_THEME_DEFAULT, np2StyleTheme == StyleTheme_Default);
+	CheckCmd(hmenu, IDM_VIEW_STYLE_THEME_DARK, np2StyleTheme == StyleTheme_Dark);
+	CheckCmd(hmenu, IDM_VIEW_STYLE_THEME_SOLARIZED_LIGHT, np2StyleTheme == StyleTheme_SolarizedLight);
+	CheckCmd(hmenu, IDM_VIEW_STYLE_THEME_TANGO_WARM_DARK, np2StyleTheme == StyleTheme_TangoWarmDark);
+	CheckCmd(hmenu, IDM_VIEW_STYLE_THEME_GRUVBOX_DARK, np2StyleTheme == StyleTheme_GruvboxDark);
+	CheckCmd(hmenu, IDM_VIEW_STYLE_THEME_GRUVBOX_LIGHT, np2StyleTheme == StyleTheme_GruvboxLight);
 
 	CheckCmd(hmenu, IDM_VIEW_WORDWRAP, fvCurFile.fWordWrap);
 	i = IDM_VIEW_FONTQUALITY_DEFAULT + iFontQuality;
@@ -3791,6 +3909,20 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 	case IDM_VIEW_STYLE_THEME_DEFAULT:
 	case IDM_VIEW_STYLE_THEME_DARK:
 		Style_OnStyleThemeChanged(LOWORD(wParam) - IDM_VIEW_STYLE_THEME_DEFAULT);
+		ApplyWindowChromeTheme(hwnd);
+		break;
+	case IDM_VIEW_STYLE_THEME_SOLARIZED_LIGHT:
+		Style_OnStyleThemeChanged(StyleTheme_SolarizedLight);
+		ApplyWindowChromeTheme(hwnd);
+		break;
+	case IDM_VIEW_STYLE_THEME_TANGO_WARM_DARK:
+		Style_OnStyleThemeChanged(StyleTheme_TangoWarmDark);
+		ApplyWindowChromeTheme(hwnd);
+		break;
+	case IDM_VIEW_STYLE_THEME_GRUVBOX_DARK:
+	case IDM_VIEW_STYLE_THEME_GRUVBOX_LIGHT:
+		Style_OnStyleThemeChanged(LOWORD(wParam) == IDM_VIEW_STYLE_THEME_GRUVBOX_DARK ? StyleTheme_GruvboxDark : StyleTheme_GruvboxLight);
+		ApplyWindowChromeTheme(hwnd);
 		break;
 
 	case IDM_VIEW_DEFAULT_CODE_FONT:
@@ -4063,6 +4195,8 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 	case IDM_VIEW_MENU:
 		bShowMenu = !bShowMenu;
 		SetMenu(hwnd, bShowMenu ? hmenuMain : nullptr);
+		ThemeChrome_ApplyMenu(hmenuMain);
+		if (bShowMenu) { DrawMenuBar(hwnd); }
 		break;
 
 	case IDM_VIEW_TOOLBAR:
@@ -4294,6 +4428,26 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 
 	case IDM_VIEW_SAVESETTINGSNOW:
 		SaveSettingsNow(false, false);
+		break;
+
+	case IDM_VIEW_EXPORT_CONFIG_ZIP:
+		ConfigBackup_Export(hwnd);
+		break;
+
+	case IDM_VIEW_RESTORE_CONFIG:
+		ConfigRestore_ShowDialog(hwnd);
+		break;
+
+	case IDM_VIEW_LOCAL_BACKUP_HISTORY:
+		ConfigAutoBackup_ShowHistory(hwnd);
+		break;
+
+	case IDM_VIEW_CLOUD_BACKUP:
+		ConfigCloud_ShowDialog(hwnd);
+		break;
+
+	case IDM_VIEW_CONFIG_MANAGER:
+		ConfigManager_ShowDialog(hwnd);
 		break;
 
 	case IDM_HELP_ABOUT:
@@ -4627,6 +4781,10 @@ LRESULT MsgNotify(HWND hwnd, WPARAM wParam, LPARAM lParam) {
 
 	LPNMHDR pnmh = AsPointer<LPNMHDR>(lParam);
 	const SCNotification * const scn = AsPointer<SCNotification *>(lParam);
+
+	if (pnmh->code == NM_CUSTOMDRAW && pnmh->idFrom == IDC_TOOLBAR) {
+		return ThemeChrome_HandleNotify(lParam);
+	}
 
 	switch (pnmh->idFrom) {
 	case IDC_EDIT:
@@ -5120,6 +5278,30 @@ void LoadSettings() noexcept {
 	bSaveRecentFiles = iValue & true;
 	iMaxRecentFiles = max(iValue >> 1, MRU_MAXITEMS);
 	bSaveFindReplace = section.GetBool(L"SaveFindReplace", false);
+	{
+		ConfigAutoBackupSettings &autoBackup = ConfigAutoBackup_Settings();
+		autoBackup.enabled = section.GetBool(L"AutoBackup", true);
+		autoBackup.intervalHours = clamp(section.GetInt(L"AutoBackupIntervalHours", 24), 1, 24 * 30);
+		autoBackup.keepCount = clamp(section.GetInt(L"AutoBackupKeep", 10), 1, 50);
+		autoBackup.includeHistory = section.GetBool(L"AutoBackupHistory", false);
+	}
+	{
+		ConfigCloudSettings &cloud = ConfigCloud_Settings();
+		LPCWSTR value = section.GetValue(L"CloudUrl");
+		cloud.url = value != nullptr ? value : L"";
+		value = section.GetValue(L"CloudUser");
+		cloud.userName = value != nullptr ? value : L"";
+		value = section.GetValue(L"CloudFolder");
+		cloud.remoteFolder = value != nullptr ? value : L"Notepad4-TxtSyntax";
+		cloud.saveCredentials = section.GetBool(L"CloudSaveCredentials", true);
+	}
+	{
+		ConfigCloudAutoSettings &cloudAuto = ConfigCloudAuto_Settings();
+		cloudAuto.enabled = section.GetBool(L"CloudAutoBackup", false);
+		cloudAuto.intervalHours = clamp(section.GetInt(L"CloudAutoIntervalHours", 24), 1, 24 * 30);
+		cloudAuto.keepCount = clamp(section.GetInt(L"CloudAutoKeep", 10), 1, 50);
+		cloudAuto.includeHistory = section.GetBool(L"CloudAutoHistory", false);
+	}
 	iValue = section.GetInt(L"FindReplaceOption", FindReplaceOption_Default);
 	iFindReplaceOption = iValue & 15;
 	efrData.option = iValue >> 4;
@@ -5432,6 +5614,27 @@ void SaveSettings(bool bSaveSettingsNow) noexcept {
 	int iValue = (iMaxRecentFiles << 1) | static_cast<int>(bSaveRecentFiles);
 	section.SetIntEx(L"SaveRecentFiles", iValue, MRU_MAXITEMS << 1);
 	section.SetBoolEx(L"SaveFindReplace", bSaveFindReplace, false);
+	{
+		const ConfigAutoBackupSettings &autoBackup = ConfigAutoBackup_Settings();
+		section.SetBoolEx(L"AutoBackup", autoBackup.enabled, true);
+		section.SetIntEx(L"AutoBackupIntervalHours", autoBackup.intervalHours, 24);
+		section.SetIntEx(L"AutoBackupKeep", autoBackup.keepCount, 10);
+		section.SetBoolEx(L"AutoBackupHistory", autoBackup.includeHistory, false);
+	}
+	{
+		const ConfigCloudSettings &cloud = ConfigCloud_Settings();
+		section.SetString(L"CloudUrl", cloud.url.c_str());
+		section.SetString(L"CloudUser", cloud.userName.c_str());
+		section.SetString(L"CloudFolder", cloud.remoteFolder.c_str());
+		section.SetBoolEx(L"CloudSaveCredentials", cloud.saveCredentials, true);
+	}
+	{
+		const ConfigCloudAutoSettings &cloudAuto = ConfigCloudAuto_Settings();
+		section.SetBoolEx(L"CloudAutoBackup", cloudAuto.enabled, false);
+		section.SetIntEx(L"CloudAutoIntervalHours", cloudAuto.intervalHours, 24);
+		section.SetIntEx(L"CloudAutoKeep", cloudAuto.keepCount, 10);
+		section.SetBoolEx(L"CloudAutoHistory", cloudAuto.includeHistory, false);
+	}
 	iValue = iFindReplaceOption | ((efrData.option & FindReplaceOption_BehaviorMask) << 4);
 	section.SetIntEx(L"FindReplaceOption", iValue, FindReplaceOption_Default);
 	if (bSaveFindReplace) {
@@ -6335,6 +6538,7 @@ void FindIniFile() noexcept {
 		success = GetFileAttributesEx(lpszIniFile, GetFileExInfoStandard, &data);
 	}
 	if (success && (data.nFileSizeLow >= 2 || data.nFileSizeHigh != 0 || (data.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_READONLY)) != 0)) {
+		Style_EnsureThemeFiles();
 		return;
 	}
 
@@ -6351,6 +6555,7 @@ void FindIniFile() noexcept {
 		}
 		CloseHandle(hFile);
 	}
+	Style_EnsureThemeFiles();
 }
 
 bool CreateIniFile(LPCWSTR lpszIniFile) noexcept {

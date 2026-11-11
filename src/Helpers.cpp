@@ -3164,6 +3164,40 @@ void MinimizeWndToTray(HWND hwnd) noexcept {
 	ShowWindow(hwnd, SW_HIDE);
 }
 
+std::wstring GetNotepad4DataDirectory() noexcept {
+	PWSTR documents = nullptr;
+	if (FAILED(SHGetKnownFolderPath(FOLDERID_Documents, KF_FLAG_DEFAULT, nullptr, &documents))) {
+		return {};
+	}
+	std::wstring path = documents;
+	CoTaskMemFree(documents);
+	if (path.empty()) {
+		return {};
+	}
+	if (path.back() != L'\\') {
+		path.push_back(L'\\');
+	}
+	path += L"Notepad4-TxtSyntax";
+	return path;
+}
+
+std::wstring GetNotepad4PrivateDataDirectory() noexcept {
+	PWSTR localAppData = nullptr;
+	if (FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &localAppData))) {
+		return {};
+	}
+	std::wstring path = localAppData;
+	CoTaskMemFree(localAppData);
+	if (path.empty()) {
+		return {};
+	}
+	if (path.back() != L'\\') {
+		path.push_back(L'\\');
+	}
+	path += L"Notepad4-TxtSyntax";
+	return path;
+}
+
 void RestoreWndFromTray(HWND hwnd) noexcept {
 	if (GetDoAnimateMinimize()) {
 		// Get the rect of the tray and the window. Note that the window rect

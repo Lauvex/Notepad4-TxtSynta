@@ -32,3 +32,6 @@ compile_commands.json
 *.plist
 *.orig
 *.log
+/scripts/lauvex/
+/docs/
+*.bak

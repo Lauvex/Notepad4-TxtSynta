@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="AVX2Debug|x64">
@@ -168,7 +168,7 @@
       <BuildStlModules>false</BuildStlModules>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>comctl32.lib;shlwapi.lib;imm32.lib;uxtheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;shlwapi.lib;imm32.lib;uxtheme.lib;bcrypt.lib;winhttp.lib;crypt32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/DEPENDENTLOADFLAG:0x800 %(AdditionalOptions)</AdditionalOptions>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -529,6 +529,7 @@
     <ClCompile Include="..\..\scintilla\lexers\LexTCL.cxx" />
     <ClCompile Include="..\..\scintilla\lexers\LexTexinfo.cxx" />
     <ClCompile Include="..\..\scintilla\lexers\LexTOML.cxx" />
+    <ClCompile Include="..\..\scintilla\lexers\LexTxtSyntax.cxx" />
     <ClCompile Include="..\..\scintilla\lexers\LexTypst.cxx" />
     <ClCompile Include="..\..\scintilla\lexers\LexVB.cxx" />
     <ClCompile Include="..\..\scintilla\lexers\LexVerilog.cxx" />
@@ -586,6 +587,16 @@
     <ClCompile Include="..\..\scintilla\win32\SurfaceGDI.cxx" />
     <ClCompile Include="..\..\src\Bridge.cpp" />
     <ClCompile Include="..\..\src\DarkMode.cpp" />
+    <ClCompile Include="..\..\src\ConfigArchive.cpp" />
+    <ClCompile Include="..\..\src\ConfigAutoBackup.cpp" />
+    <ClCompile Include="..\..\src\ConfigAutoBackupUI.cpp" />
+    <ClCompile Include="..\..\src\ConfigBackup.cpp" />
+    <ClCompile Include="..\..\src\ConfigCloud.cpp" />
+    <ClCompile Include="..\..\src\ConfigCloudAuto.cpp" />
+    <ClCompile Include="..\..\src\ConfigCloudUI.cpp" />
+    <ClCompile Include="..\..\src\ConfigManagerUI.cpp" />
+    <ClCompile Include="..\..\src\ConfigRestore.cpp" />
+    <ClCompile Include="..\..\src\ConfigRestoreUI.cpp" />
     <ClCompile Include="..\..\src\Dialogs.cpp" />
     <ClCompile Include="..\..\src\Dlapi.cpp" />
     <ClCompile Include="..\..\src\Edit.cpp" />
@@ -665,6 +676,7 @@
     <ClCompile Include="..\..\src\EditLexers\stlTcl.cpp" />
     <ClCompile Include="..\..\src\EditLexers\stlTexinfo.cpp" />
     <ClCompile Include="..\..\src\EditLexers\stlTOML.cpp" />
+    <ClCompile Include="..\..\src\EditLexers\stlTxtSyntax.cpp" />
     <ClCompile Include="..\..\src\EditLexers\stlTypeScript.cpp" />
     <ClCompile Include="..\..\src\EditLexers\stlTypst.cpp" />
     <ClCompile Include="..\..\src\EditLexers\stlVB.cpp" />
@@ -749,6 +761,13 @@
     <ClInclude Include="..\..\scintilla\win32\WinTypes.h" />
     <ClInclude Include="..\..\src\compiler.h" />
     <ClInclude Include="..\..\src\config.h" />
+    <ClInclude Include="..\..\src\ConfigArchive.h" />
+    <ClInclude Include="..\..\src\ConfigAutoBackup.h" />
+    <ClInclude Include="..\..\src\ConfigBackup.h" />
+    <ClInclude Include="..\..\src\ConfigCloud.h" />
+    <ClInclude Include="..\..\src\ConfigCloudAuto.h" />
+    <ClInclude Include="..\..\src\ConfigManager.h" />
+    <ClInclude Include="..\..\src\ConfigRestore.h" />
     <ClInclude Include="..\..\src\DarkMode.h" />
     <ClInclude Include="..\..\src\Dialogs.h" />
     <ClInclude Include="..\..\src\Dlapi.h" />

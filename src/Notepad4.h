@@ -240,6 +240,8 @@ void CALLBACK PasteBoardTimer(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTi
 void LoadSettings() noexcept;
 void SaveSettingsNow(bool bOnlySaveStyle, bool bQuiet) noexcept;
 void SaveSettings(bool bSaveSettingsNow) noexcept;
+void SaveHistoryForBackup() noexcept;
+void PrepareSettingsRestartAfterRestore() noexcept;
 void SaveWindowPosition(WCHAR *pIniSectionBuf) noexcept;
 void ClearWindowPositionHistory() noexcept;
 void ParseCommandLine() noexcept;

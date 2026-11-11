@@ -1,4 +1,4 @@
-// Microsoft Visual C++ generated resource script.
+﻿// Microsoft Visual C++ generated resource script.
 //
 #include "../../src/resource.h"
 #include "../../src/config.h"
@@ -500,8 +500,12 @@ BEGIN
 		MENUITEM "使用默认代码样式(&U)\tShift+F12",	IDM_VIEW_USEDEFAULT_CODESTYLE
 		POPUP "主题风格(&Y)"
 		BEGIN
-			MENUITEM "默认(&D)",					IDM_VIEW_STYLE_THEME_DEFAULT
-			MENUITEM "暗色(&K)",					IDM_VIEW_STYLE_THEME_DARK
+			MENUITEM "默认（官方原版）", IDM_VIEW_STYLE_THEME_DEFAULT
+			MENUITEM "深色（官方原版）", IDM_VIEW_STYLE_THEME_DARK
+			MENUITEM "Solarized Light（暖浅色）", IDM_VIEW_STYLE_THEME_SOLARIZED_LIGHT
+			MENUITEM "Tango Warm Dark（暖深色）", IDM_VIEW_STYLE_THEME_TANGO_WARM_DARK
+			MENUITEM "Gruvbox Dark（复古深色）", IDM_VIEW_STYLE_THEME_GRUVBOX_DARK
+			MENUITEM "Gruvbox Light（复古浅色）", IDM_VIEW_STYLE_THEME_GRUVBOX_LIGHT
 		END
 		MENUITEM SEPARATOR
 		POPUP "文本文件(&T)"
@@ -709,6 +713,11 @@ BEGIN
 		END
 		MENUITEM "退出时保存设置(&O)",				IDM_VIEW_SAVESETTINGS
 		MENUITEM "立即保存设置(&V)\tF7",			IDM_VIEW_SAVESETTINGSNOW
+		MENUITEM "配置管理(&M)...", IDM_VIEW_CONFIG_MANAGER
+		MENUITEM "导出配置备份(&B) (ZIP)...", IDM_VIEW_EXPORT_CONFIG_ZIP
+		MENUITEM "从配置备份恢复(&R)...", IDM_VIEW_RESTORE_CONFIG
+		MENUITEM "本地备份历史(&H)...", IDM_VIEW_LOCAL_BACKUP_HISTORY
+		MENUITEM "WebDAV 加密备份(&W)...", IDM_VIEW_CLOUD_BACKUP
 	END
 	POPUP "工具(&T)"
 	BEGIN
@@ -1271,6 +1280,115 @@ BEGIN
     PUSHBUTTON      "取消",IDCANCEL,109,48,50,14
 END
 
+IDD_CONFIG_RESTORE DIALOGEX 0, 0, 380, 310
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "恢复配置"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LTEXT           "备份文件：",IDC_STATIC,7,7,50,8
+    EDITTEXT        IDC_RESTORE_PATH,7,17,310,13,ES_AUTOHSCROLL | ES_READONLY
+    PUSHBUTTON      "浏览...",IDC_RESTORE_BROWSE,323,17,50,14
+    LTEXT           "",IDC_RESTORE_INFO,7,36,366,58,SS_LEFT
+    GROUPBOX        "恢复内容",IDC_STATIC,7,98,366,70
+    AUTOCHECKBOX    "完整恢复（替换所选文件）",IDC_RESTORE_FULL,14,110,210,10
+    AUTOCHECKBOX    "基础设置",IDC_RESTORE_BASIC,14,124,100,10
+    AUTOCHECKBOX    "界面与窗口",IDC_RESTORE_INTERFACE,14,136,120,10
+    AUTOCHECKBOX    "主题与颜色",IDC_RESTORE_THEMES,180,124,100,10
+    AUTOCHECKBOX    "语法与扩展名",IDC_RESTORE_SYNTAX,180,136,120,10
+    AUTOCHECKBOX    "历史记录",IDC_RESTORE_HISTORY,14,150,100,10
+    AUTOCHECKBOX    "matepath",IDC_RESTORE_MATEPATH,180,150,100,10
+    GROUPBOX        "变更预览",IDC_STATIC,7,174,366,100
+    EDITTEXT        IDC_RESTORE_PREVIEW,14,186,352,80,ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL
+    PUSHBUTTON      "预览",IDC_RESTORE_PREVIEW_BTN,7,282,60,14
+    DEFPUSHBUTTON   "恢复",IDOK,255,282,60,14
+    PUSHBUTTON      "取消",IDCANCEL,319,282,54,14
+END
+
+IDD_CONFIG_HISTORY DIALOGEX 0, 0, 420, 286
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "本地配置备份历史"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LTEXT           "备份目录：",IDC_STATIC,7,7,50,8
+    EDITTEXT        IDC_HISTORY_FOLDER,7,17,406,13,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "",IDC_HISTORY_SUMMARY,7,35,406,20,SS_LEFT
+    LISTBOX         IDC_HISTORY_LIST,7,58,406,158,LBS_NOINTEGRALHEIGHT | LBS_NOTIFY | WS_VSCROLL | WS_TABSTOP | WS_BORDER
+    AUTOCHECKBOX    "启用自动备份",IDC_HISTORY_ENABLED,7,224,110,10
+    AUTOCHECKBOX    "备份包含历史记录",IDC_HISTORY_INCLUDE,140,224,140,10
+    PUSHBUTTON      "立即备份",IDC_HISTORY_BACKUP_NOW,7,246,60,14
+    PUSHBUTTON      "恢复所选",IDC_HISTORY_RESTORE,73,246,65,14
+    PUSHBUTTON      "删除",IDC_HISTORY_DELETE,144,246,50,14
+    PUSHBUTTON      "打开文件夹",IDC_HISTORY_OPEN_FOLDER,200,246,65,14
+    PUSHBUTTON      "刷新",IDC_HISTORY_REFRESH,271,246,45,14
+    DEFPUSHBUTTON   "关闭",IDCANCEL,350,246,63,14
+    LTEXT           "仅备份已保存的设置；按 F7 可先保存。",IDC_STATIC,7,268,340,10
+END
+
+IDD_CLOUD_BACKUP DIALOGEX 0, 0, 460, 222
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WebDAV 加密备份"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LTEXT           "WebDAV 地址：",IDC_STATIC,7,7,70,8
+    EDITTEXT        IDC_CLOUD_URL,7,17,300,13,ES_AUTOHSCROLL
+    LTEXT           "远程目录：",IDC_STATIC,313,7,80,8
+    EDITTEXT        IDC_CLOUD_FOLDER,313,17,140,13,ES_AUTOHSCROLL
+    LTEXT           "用户名：",IDC_STATIC,7,38,60,8
+    EDITTEXT        IDC_CLOUD_USER,7,48,140,13,ES_AUTOHSCROLL
+    LTEXT           "密码：",IDC_STATIC,160,38,60,8
+    EDITTEXT        IDC_CLOUD_PASSWORD,160,48,140,13,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "加密口令：",IDC_STATIC,7,68,120,8
+    EDITTEXT        IDC_CLOUD_PASSPHRASE,7,78,293,13,ES_PASSWORD | ES_AUTOHSCROLL
+    AUTOCHECKBOX    "使用 Windows DPAPI 保存密码和口令",IDC_CLOUD_SAVE_CREDENTIALS,7,98,300,10
+    AUTOCHECKBOX    "备份包含最近文件及查找/替换历史",IDC_CLOUD_HISTORY,7,112,280,10
+    LTEXT           "",IDC_CLOUD_STATUS,7,130,446,60,SS_LEFT
+    PUSHBUTTON      "保存设置",IDC_CLOUD_SAVE_SETTINGS,7,198,70,14
+    PUSHBUTTON      "测试连接",IDC_CLOUD_TEST,82,198,75,14
+    PUSHBUTTON      "上传加密备份",IDC_CLOUD_UPLOAD,162,198,100,14
+    PUSHBUTTON      "选择云端备份...",IDC_CLOUD_RESTORE,267,198,75,14
+    DEFPUSHBUTTON   "关闭",IDCANCEL,393,198,60,14
+END
+
+IDD_CONFIG_MANAGER DIALOGEX 0, 0, 430, 292
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "配置管理"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "本地自动备份",IDC_STATIC,7,7,416,100
+    AUTOCHECKBOX    "启用自动备份",IDC_MGR_LOCAL_ENABLED,14,21,180,10
+    LTEXT           "间隔（小时）：",IDC_STATIC,14,39,80,8
+    EDITTEXT        IDC_MGR_LOCAL_INTERVAL,100,37,35,13,ES_NUMBER | ES_AUTOHSCROLL
+    LTEXT           "保留：",IDC_STATIC,150,39,30,8
+    EDITTEXT        IDC_MGR_LOCAL_KEEP,185,37,35,13,ES_NUMBER | ES_AUTOHSCROLL
+    AUTOCHECKBOX    "包含最近文件及查找/替换历史",IDC_MGR_LOCAL_HISTORY,14,57,220,10
+    PUSHBUTTON      "本地备份历史...",IDC_MGR_LOCAL_HISTORY_BTN,290,55,125,14
+    GROUPBOX        "WebDAV 自动备份",IDC_STATIC,7,112,416,100
+    AUTOCHECKBOX    "启用自动云备份",IDC_MGR_CLOUD_ENABLED,14,126,200,10
+    LTEXT           "间隔（小时）：",IDC_STATIC,14,144,80,8
+    EDITTEXT        IDC_MGR_CLOUD_INTERVAL,100,142,35,13,ES_NUMBER | ES_AUTOHSCROLL
+    LTEXT           "保留：",IDC_STATIC,150,144,30,8
+    EDITTEXT        IDC_MGR_CLOUD_KEEP,185,142,35,13,ES_NUMBER | ES_AUTOHSCROLL
+    AUTOCHECKBOX    "包含最近文件及查找/替换历史",IDC_MGR_CLOUD_HISTORY,14,162,220,10
+    PUSHBUTTON      "WebDAV 设置...",IDC_MGR_CLOUD_BTN,290,160,125,14
+    LTEXT           "",IDC_MGR_STATUS,7,220,416,42,SS_LEFT
+    PUSHBUTTON      "导出...",IDC_MGR_EXPORT,7,268,70,14
+    PUSHBUTTON      "恢复...",IDC_MGR_RESTORE,82,268,70,14
+    DEFPUSHBUTTON   "保存",IDC_MGR_SAVE,290,268,70,14
+    PUSHBUTTON      "关闭",IDCANCEL,365,268,58,14
+END
+
+IDD_CLOUD_HISTORY DIALOGEX 0, 0, 560, 300
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "云端备份"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LISTBOX         IDC_CLOUD_HISTORY_LIST,7,7,546,210,LBS_NOINTEGRALHEIGHT | LBS_NOTIFY | WS_VSCROLL | WS_TABSTOP | WS_BORDER
+    LTEXT           "",IDC_CLOUD_HISTORY_STATUS,7,222,546,40,SS_LEFT
+    PUSHBUTTON      "刷新",IDC_CLOUD_HISTORY_REFRESH,7,268,60,14
+    PUSHBUTTON      "恢复所选",IDC_CLOUD_HISTORY_RESTORE,73,268,90,14
+    DEFPUSHBUTTON   "关闭",IDCANCEL,480,268,73,14
+END
+
 IDD_FILEMRU DIALOGEX 0, 0, 226, 204
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 CAPTION "打开最近的文件"
@@ -1794,6 +1912,78 @@ BEGIN
     IDS_FILTER_INI          "配置文件(*.ini)|*.ini|所有文件(*.*)|*.*|"
     IDS_OPENWITH            "选择您收藏应用程序快捷方式的文件夹。"
     IDS_FAVORITES           "选择您收藏文件快捷方式的文件夹。"
+    IDS_CONFIG_BACKUP_TITLE       "导出配置备份"
+    IDS_CONFIG_BACKUP_PRIVACY     "是否包含最近文件、查找历史和替换历史？\n\n选择“否”可仅备份设置、主题和语法，不包含个人历史记录。\n备份的是已保存配置；如有未保存修改，请先按 F7。"
+    IDS_CONFIG_BACKUP_SUCCESS     "配置备份已创建：\n%s\n\nSHA-256：\n%s\n\n%s"
+    IDS_CONFIG_BACKUP_FAIL        "配置备份创建失败。\n\n%s"
+    IDS_CONFIG_BACKUP_NOINI       "找不到已保存的主配置文件。请先按 F7 保存设置，再重试。"
+    IDS_CONFIG_BACKUP_HISTORY_YES "已包含最近文件及查找/替换历史。"
+    IDS_CONFIG_BACKUP_HISTORY_NO  "未包含最近文件及查找/替换历史。"
+    IDS_CONFIG_BACKUP_FILTER      "配置备份 (*.zip)|*.zip|所有文件 (*.*)|*.*|"
+    IDS_RESTORE_TITLE             "恢复配置"
+    IDS_RESTORE_FILTER            "配置备份 (*.zip)|*.zip|所有文件 (*.*)|*.*|"
+    IDS_RESTORE_INFO_FMT          "格式：%s   应用版本：%s\n创建时间：%s   文件数：%u\n历史记录：%s   matepath：%s\n%s"
+    IDS_RESTORE_FORMAT_CURRENT    "版本化备份"
+    IDS_RESTORE_FORMAT_LEGACY     "旧版六 INI 备份"
+    IDS_RESTORE_YES               "是"
+    IDS_RESTORE_NO                "否"
+    IDS_RESTORE_LEGACY_NOTICE     "旧格式没有 manifest 和逐文件 SHA-256，只能进行 ZIP CRC 校验；无法获知 matepath 和完整类别信息。"
+    IDS_RESTORE_PREVIEW_EMPTY     "没有检测到将发生的配置变化。"
+    IDS_RESTORE_PREVIEW_FILE_FMT  "%s：修改 %d，增加 %d，删除 %d\n%s\n\n"
+    IDS_RESTORE_PREVIEW_SUMMARY   "合计：修改 %d，增加 %d，删除 %d。\n\n"
+    IDS_RESTORE_CONFIRM           "将恢复所选配置。\n\n程序会先自动创建当前配置的回滚快照。恢复成功后应用将重启。是否继续？"
+    IDS_RESTORE_SUCCESS           "已恢复 %d 个配置文件。\n\n回滚快照：\n%s\n\n应用将重启以加载恢复后的设置。"
+    IDS_RESTORE_FAIL              "配置恢复失败。\n\n%s"
+    IDS_RESTORE_NO_CHANGES        "没有需要恢复的配置变化。"
+    IDS_RESTORE_RECOVERED         "上次中断的配置恢复已自动回滚。"
+    IDS_RESTORE_RECOVERY_FAILED   "上次中断的配置恢复未能回滚。\n\n%s"
+    IDS_RESTORE_SELECT_FILE       "请选择配置备份 ZIP 文件。"
+    IDS_RESTORE_UNKNOWN           "未知"
+    IDS_RESTORE_CATEGORY_EMPTY    "请至少选择一项恢复内容。"
+    IDS_HISTORY_TITLE             "本地配置备份"
+    IDS_HISTORY_SUMMARY_FMT       "自动备份：%s；间隔 %d 小时；保留 %d 份；历史记录：%s。"
+    IDS_HISTORY_ITEM_FMT          "%s  |  %s  |  %s  |  %s"
+    IDS_HISTORY_YES               "包含"
+    IDS_HISTORY_NO                "不包含"
+    IDS_HISTORY_ON                "已启用"
+    IDS_HISTORY_OFF               "已关闭"
+    IDS_HISTORY_EMPTY             "（暂无本地备份）"
+    IDS_HISTORY_BACKUP_SUCCESS    "本地备份已创建：\n%s\n\n保留最近 %d 份。"
+    IDS_HISTORY_BACKUP_FAIL       "无法创建本地备份。\n\n%s"
+    IDS_HISTORY_DELETE_CONFIRM    "确定删除所选本地备份？\n\n%s"
+    IDS_HISTORY_DELETE_FAIL       "无法删除所选本地备份。\n\n%s"
+    IDS_HISTORY_SELECT            "请先选择一个本地备份。"
+    IDS_HISTORY_OPEN_FAIL         "无法打开本地备份目录。\n\n%s"
+    IDS_HISTORY_READ_FAIL         "无法读取本地备份历史。\n\n%s"
+    IDS_CLOUD_TITLE               "WebDAV 加密备份"
+    IDS_CLOUD_TEST_OK             "WebDAV 连接和远程目录可用。"
+    IDS_CLOUD_TEST_FAIL           "WebDAV 连接失败。\n\n%s"
+    IDS_CLOUD_UPLOAD_OK           "加密备份已上传：\n%s\n\n大小：%llu 字节。"
+    IDS_CLOUD_UPLOAD_FAIL         "无法上传加密备份。\n\n%s"
+    IDS_CLOUD_RESTORE_FAIL        "无法下载或解密最新备份。\n\n%s"
+    IDS_CLOUD_SETTINGS_SAVED      "云端设置已保存。"
+    IDS_CLOUD_NO_BACKUP           "未找到加密备份。"
+    IDS_CLOUD_CREDENTIALS_FAIL    "无法保存或读取云凭据。\n\n%s"
+    IDS_CLOUD_READY               "请输入 WebDAV 和加密信息；上传内容使用 AES-256-GCM 加密。"
+    IDS_CLOUD_NEED_PASSPHRASE     "请输入加密口令。"
+    IDS_CLOUD_HTTP_WARNING        "警告：HTTP 不会用 TLS 保护 WebDAV 密码。"
+    IDS_CLOUD_RESTORE_CANCELLED   "已取消恢复。"
+    IDS_CLOUD_URL_REQUIRED        "请输入 WebDAV 地址。"
+    IDS_MGR_TITLE                 "配置管理"
+    IDS_MGR_SAVED                 "设置已保存。"
+    IDS_MGR_DATA_FMT              "应用数据目录：%s"
+    IDS_MGR_CLOUD_ERROR_FMT       "自动云备份上次错误：%s"
+    IDS_MGR_CLOUD_OK              "自动云备份：就绪。"
+    IDS_MGR_CLOUD_NOT_CONFIG      "自动云备份尚未配置（WebDAV 地址或凭据缺失）。"
+    IDS_CLOUD_HISTORY_TITLE       "云端备份"
+    IDS_CLOUD_HISTORY_EMPTY       "（未找到加密云端备份）"
+    IDS_CLOUD_HISTORY_ITEM_FMT    "%s  |  %s  |  %s  |  %s"
+    IDS_CLOUD_HISTORY_SELECT      "请先选择一个云端备份。"
+    IDS_CLOUD_HISTORY_LOAD_FAIL   "无法读取云端备份列表。\n\n%s"
+    IDS_CLOUD_HISTORY_RESTORE_FAIL "无法下载或解密所选备份。\n\n%s"
+    IDS_CLOUD_HISTORY_AUTO        "自动"
+    IDS_CLOUD_HISTORY_MANUAL      "手工"
+    IDS_CLOUD_HISTORY_READY       "选择一个备份后点击“恢复所选”。"
 END
 
 STRINGTABLE

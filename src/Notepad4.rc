@@ -1,4 +1,4 @@
-// Microsoft Visual C++ generated resource script.
+﻿// Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
 #include "config.h"
@@ -500,8 +500,12 @@ BEGIN
 		MENUITEM "&Use Default Code Style\tShift+F12",IDM_VIEW_USEDEFAULT_CODESTYLE
 		POPUP "St&yle Theme"
 		BEGIN
-			MENUITEM "&Default",					IDM_VIEW_STYLE_THEME_DEFAULT
-			MENUITEM "Dar&k",						IDM_VIEW_STYLE_THEME_DARK
+			MENUITEM "Default (Original)", IDM_VIEW_STYLE_THEME_DEFAULT
+			MENUITEM "Dark (Original)", IDM_VIEW_STYLE_THEME_DARK
+			MENUITEM "Solarized Light", IDM_VIEW_STYLE_THEME_SOLARIZED_LIGHT
+			MENUITEM "Tango Warm Dark", IDM_VIEW_STYLE_THEME_TANGO_WARM_DARK
+			MENUITEM "Gruvbox Dark", IDM_VIEW_STYLE_THEME_GRUVBOX_DARK
+			MENUITEM "Gruvbox Light", IDM_VIEW_STYLE_THEME_GRUVBOX_LIGHT
 		END
 		MENUITEM SEPARATOR
 		POPUP "&Text File"
@@ -709,6 +713,11 @@ BEGIN
 		END
 		MENUITEM "Save Settings &On Exit",			IDM_VIEW_SAVESETTINGS
 		MENUITEM "Sa&ve Settings Now\tF7",			IDM_VIEW_SAVESETTINGSNOW
+		MENUITEM "Configuration &Management...", IDM_VIEW_CONFIG_MANAGER
+		MENUITEM "Export Settings &Backup (ZIP)...", IDM_VIEW_EXPORT_CONFIG_ZIP
+		MENUITEM "Restore Settings from &Backup...", IDM_VIEW_RESTORE_CONFIG
+		MENUITEM "Local Backup &History...", IDM_VIEW_LOCAL_BACKUP_HISTORY
+		MENUITEM "Encrypted &WebDAV Backup...", IDM_VIEW_CLOUD_BACKUP
 	END
 	POPUP "&Tools"
 	BEGIN
@@ -1271,6 +1280,115 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,109,48,50,14
 END
 
+IDD_CONFIG_RESTORE DIALOGEX 0, 0, 380, 310
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Restore Settings"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LTEXT           "Backup file:",IDC_STATIC,7,7,50,8
+    EDITTEXT        IDC_RESTORE_PATH,7,17,310,13,ES_AUTOHSCROLL | ES_READONLY
+    PUSHBUTTON      "Browse...",IDC_RESTORE_BROWSE,323,17,50,14
+    LTEXT           "",IDC_RESTORE_INFO,7,36,366,58,SS_LEFT
+    GROUPBOX        "Restore contents",IDC_STATIC,7,98,366,70
+    AUTOCHECKBOX    "Complete restore (replace selected files)",IDC_RESTORE_FULL,14,110,210,10
+    AUTOCHECKBOX    "Basic settings",IDC_RESTORE_BASIC,14,124,100,10
+    AUTOCHECKBOX    "Interface and window",IDC_RESTORE_INTERFACE,14,136,120,10
+    AUTOCHECKBOX    "Themes and colors",IDC_RESTORE_THEMES,180,124,100,10
+    AUTOCHECKBOX    "Syntax and extensions",IDC_RESTORE_SYNTAX,180,136,120,10
+    AUTOCHECKBOX    "History",IDC_RESTORE_HISTORY,14,150,100,10
+    AUTOCHECKBOX    "matepath",IDC_RESTORE_MATEPATH,180,150,100,10
+    GROUPBOX        "Changes preview",IDC_STATIC,7,174,366,100
+    EDITTEXT        IDC_RESTORE_PREVIEW,14,186,352,80,ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL
+    PUSHBUTTON      "Preview",IDC_RESTORE_PREVIEW_BTN,7,282,60,14
+    DEFPUSHBUTTON   "Restore",IDOK,255,282,60,14
+    PUSHBUTTON      "Cancel",IDCANCEL,319,282,54,14
+END
+
+IDD_CONFIG_HISTORY DIALOGEX 0, 0, 420, 286
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Local Settings Backups"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LTEXT           "Backup folder:",IDC_STATIC,7,7,50,8
+    EDITTEXT        IDC_HISTORY_FOLDER,7,17,406,13,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "",IDC_HISTORY_SUMMARY,7,35,406,20,SS_LEFT
+    LISTBOX         IDC_HISTORY_LIST,7,58,406,158,LBS_NOINTEGRALHEIGHT | LBS_NOTIFY | WS_VSCROLL | WS_TABSTOP | WS_BORDER
+    AUTOCHECKBOX    "Enable automatic backups",IDC_HISTORY_ENABLED,7,224,110,10
+    AUTOCHECKBOX    "Include history in backups",IDC_HISTORY_INCLUDE,140,224,140,10
+    PUSHBUTTON      "Back up now",IDC_HISTORY_BACKUP_NOW,7,246,60,14
+    PUSHBUTTON      "Restore selected",IDC_HISTORY_RESTORE,73,246,65,14
+    PUSHBUTTON      "Delete",IDC_HISTORY_DELETE,144,246,50,14
+    PUSHBUTTON      "Open folder",IDC_HISTORY_OPEN_FOLDER,200,246,65,14
+    PUSHBUTTON      "Refresh",IDC_HISTORY_REFRESH,271,246,45,14
+    DEFPUSHBUTTON   "Close",IDCANCEL,350,246,63,14
+    LTEXT           "Only saved settings are backed up; press F7 to save first.",IDC_STATIC,7,268,340,10
+END
+
+IDD_CLOUD_BACKUP DIALOGEX 0, 0, 460, 222
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WebDAV Encrypted Backup"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LTEXT           "WebDAV URL:",IDC_STATIC,7,7,70,8
+    EDITTEXT        IDC_CLOUD_URL,7,17,300,13,ES_AUTOHSCROLL
+    LTEXT           "Remote folder:",IDC_STATIC,313,7,80,8
+    EDITTEXT        IDC_CLOUD_FOLDER,313,17,140,13,ES_AUTOHSCROLL
+    LTEXT           "User name:",IDC_STATIC,7,38,60,8
+    EDITTEXT        IDC_CLOUD_USER,7,48,140,13,ES_AUTOHSCROLL
+    LTEXT           "Password:",IDC_STATIC,160,38,60,8
+    EDITTEXT        IDC_CLOUD_PASSWORD,160,48,140,13,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Encryption passphrase:",IDC_STATIC,7,68,120,8
+    EDITTEXT        IDC_CLOUD_PASSPHRASE,7,78,293,13,ES_PASSWORD | ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Save password and passphrase with Windows DPAPI",IDC_CLOUD_SAVE_CREDENTIALS,7,98,300,10
+    AUTOCHECKBOX    "Include recent files and find/replace history",IDC_CLOUD_HISTORY,7,112,280,10
+    LTEXT           "",IDC_CLOUD_STATUS,7,130,446,60,SS_LEFT
+    PUSHBUTTON      "Save settings",IDC_CLOUD_SAVE_SETTINGS,7,198,70,14
+    PUSHBUTTON      "Test connection",IDC_CLOUD_TEST,82,198,75,14
+    PUSHBUTTON      "Upload encrypted backup",IDC_CLOUD_UPLOAD,162,198,100,14
+    PUSHBUTTON      "Choose cloud backup...",IDC_CLOUD_RESTORE,267,198,75,14
+    DEFPUSHBUTTON   "Close",IDCANCEL,393,198,60,14
+END
+
+IDD_CONFIG_MANAGER DIALOGEX 0, 0, 430, 292
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Configuration Management"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "Local automatic backups",IDC_STATIC,7,7,416,100
+    AUTOCHECKBOX    "Enable automatic backups",IDC_MGR_LOCAL_ENABLED,14,21,180,10
+    LTEXT           "Interval (hours):",IDC_STATIC,14,39,80,8
+    EDITTEXT        IDC_MGR_LOCAL_INTERVAL,100,37,35,13,ES_NUMBER | ES_AUTOHSCROLL
+    LTEXT           "Keep:",IDC_STATIC,150,39,30,8
+    EDITTEXT        IDC_MGR_LOCAL_KEEP,185,37,35,13,ES_NUMBER | ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Include recent/find/replace history",IDC_MGR_LOCAL_HISTORY,14,57,220,10
+    PUSHBUTTON      "Local backup history...",IDC_MGR_LOCAL_HISTORY_BTN,290,55,125,14
+    GROUPBOX        "WebDAV automatic backups",IDC_STATIC,7,112,416,100
+    AUTOCHECKBOX    "Enable automatic cloud backups",IDC_MGR_CLOUD_ENABLED,14,126,200,10
+    LTEXT           "Interval (hours):",IDC_STATIC,14,144,80,8
+    EDITTEXT        IDC_MGR_CLOUD_INTERVAL,100,142,35,13,ES_NUMBER | ES_AUTOHSCROLL
+    LTEXT           "Keep:",IDC_STATIC,150,144,30,8
+    EDITTEXT        IDC_MGR_CLOUD_KEEP,185,142,35,13,ES_NUMBER | ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Include recent/find/replace history",IDC_MGR_CLOUD_HISTORY,14,162,220,10
+    PUSHBUTTON      "WebDAV settings...",IDC_MGR_CLOUD_BTN,290,160,125,14
+    LTEXT           "",IDC_MGR_STATUS,7,220,416,42,SS_LEFT
+    PUSHBUTTON      "Export...",IDC_MGR_EXPORT,7,268,70,14
+    PUSHBUTTON      "Restore...",IDC_MGR_RESTORE,82,268,70,14
+    DEFPUSHBUTTON   "Save",IDC_MGR_SAVE,290,268,70,14
+    PUSHBUTTON      "Close",IDCANCEL,365,268,58,14
+END
+
+IDD_CLOUD_HISTORY DIALOGEX 0, 0, 560, 300
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Cloud Backups"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LISTBOX         IDC_CLOUD_HISTORY_LIST,7,7,546,210,LBS_NOINTEGRALHEIGHT | LBS_NOTIFY | WS_VSCROLL | WS_TABSTOP | WS_BORDER
+    LTEXT           "",IDC_CLOUD_HISTORY_STATUS,7,222,546,40,SS_LEFT
+    PUSHBUTTON      "Refresh",IDC_CLOUD_HISTORY_REFRESH,7,268,60,14
+    PUSHBUTTON      "Restore selected",IDC_CLOUD_HISTORY_RESTORE,73,268,90,14
+    DEFPUSHBUTTON   "Close",IDCANCEL,480,268,73,14
+END
+
 IDD_FILEMRU DIALOGEX 0, 0, 226, 204
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 CAPTION "Open Recent File"
@@ -1794,6 +1912,78 @@ BEGIN
     IDS_FILTER_INI          "Configuration Files (*.ini)|*.ini|All Files (*.*)|*.*|"
     IDS_OPENWITH            "Select the directory with links to your favorite applications."
     IDS_FAVORITES           "Select the directory with links to your favorite files."
+    IDS_CONFIG_BACKUP_TITLE       "Export Settings Backup"
+    IDS_CONFIG_BACKUP_PRIVACY     "Include recent files, find history and replace history?\n\nChoose No to back up settings, themes and syntax without personal history.\nOnly saved settings are backed up; press F7 first to save changes."
+    IDS_CONFIG_BACKUP_SUCCESS     "Settings backup created:\n%s\n\nSHA-256:\n%s\n\n%s"
+    IDS_CONFIG_BACKUP_FAIL        "Cannot create the settings backup.\n\n%s"
+    IDS_CONFIG_BACKUP_NOINI       "Cannot find the saved main configuration file. Press F7 to save settings, then try again."
+    IDS_CONFIG_BACKUP_HISTORY_YES "Recent files and find/replace history are included."
+    IDS_CONFIG_BACKUP_HISTORY_NO  "Recent files and find/replace history are excluded."
+    IDS_CONFIG_BACKUP_FILTER      "Settings Backup (*.zip)|*.zip|All Files (*.*)|*.*|"
+    IDS_RESTORE_TITLE             "Restore Settings"
+    IDS_RESTORE_FILTER            "Settings Backup (*.zip)|*.zip|All Files (*.*)|*.*|"
+    IDS_RESTORE_INFO_FMT          "Format: %s   Application: %s\nCreated: %s   Files: %u\nHistory: %s   matepath: %s\n%s"
+    IDS_RESTORE_FORMAT_CURRENT    "Versioned backup"
+    IDS_RESTORE_FORMAT_LEGACY     "Legacy six-INI backup"
+    IDS_RESTORE_YES               "Yes"
+    IDS_RESTORE_NO                "No"
+    IDS_RESTORE_LEGACY_NOTICE     "Legacy format: no manifest or per-file SHA-256; only ZIP CRC is available. matepath and category metadata are unavailable."
+    IDS_RESTORE_PREVIEW_EMPTY     "No configuration changes would be made."
+    IDS_RESTORE_PREVIEW_FILE_FMT  "%s: %d changed, %d added, %d removed\n%s\n\n"
+    IDS_RESTORE_PREVIEW_SUMMARY   "Total: %d changed, %d added, %d removed.\n\n"
+    IDS_RESTORE_CONFIRM           "Restore the selected settings?\n\nA rollback snapshot will be created automatically. The application will restart after a successful restore."
+    IDS_RESTORE_SUCCESS           "Settings restored: %d files.\n\nRollback snapshot:\n%s\n\nThe application will restart to load the restored settings."
+    IDS_RESTORE_FAIL              "Settings restore failed.\n\n%s"
+    IDS_RESTORE_NO_CHANGES        "No settings need to be restored."
+    IDS_RESTORE_RECOVERED         "An interrupted settings restore was rolled back."
+    IDS_RESTORE_RECOVERY_FAILED   "An interrupted settings restore could not be rolled back.\n\n%s"
+    IDS_RESTORE_SELECT_FILE       "Select a settings backup ZIP file."
+    IDS_RESTORE_UNKNOWN           "Unknown"
+    IDS_RESTORE_CATEGORY_EMPTY    "Select at least one category to restore."
+    IDS_HISTORY_TITLE             "Local Settings Backups"
+    IDS_HISTORY_SUMMARY_FMT       "Automatic backups: %s; interval: %d hours; keep: %d; history: %s."
+    IDS_HISTORY_ITEM_FMT          "%s  |  %s  |  %s  |  %s"
+    IDS_HISTORY_YES               "included"
+    IDS_HISTORY_NO                "excluded"
+    IDS_HISTORY_ON                "on"
+    IDS_HISTORY_OFF               "off"
+    IDS_HISTORY_EMPTY             "(No local backups yet.)"
+    IDS_HISTORY_BACKUP_SUCCESS    "Local backup created:\n%s\n\nKeeping the newest %d snapshots."
+    IDS_HISTORY_BACKUP_FAIL       "Cannot create the local backup.\n\n%s"
+    IDS_HISTORY_DELETE_CONFIRM    "Delete the selected local backup?\n\n%s"
+    IDS_HISTORY_DELETE_FAIL       "Cannot delete the selected local backup.\n\n%s"
+    IDS_HISTORY_SELECT            "Select a local backup first."
+    IDS_HISTORY_OPEN_FAIL         "Cannot open the local backup folder.\n\n%s"
+    IDS_HISTORY_READ_FAIL         "Cannot read the local backup history.\n\n%s"
+    IDS_CLOUD_TITLE               "WebDAV Encrypted Backup"
+    IDS_CLOUD_TEST_OK             "WebDAV connection and remote folder are available."
+    IDS_CLOUD_TEST_FAIL           "WebDAV connection failed.\n\n%s"
+    IDS_CLOUD_UPLOAD_OK           "Encrypted backup uploaded:\n%s\n\nSize: %llu bytes."
+    IDS_CLOUD_UPLOAD_FAIL         "Cannot upload the encrypted backup.\n\n%s"
+    IDS_CLOUD_RESTORE_FAIL        "Cannot download or decrypt the latest backup.\n\n%s"
+    IDS_CLOUD_SETTINGS_SAVED      "Cloud settings saved."
+    IDS_CLOUD_NO_BACKUP           "No encrypted backups were found."
+    IDS_CLOUD_CREDENTIALS_FAIL    "Cannot save or load the cloud credentials.\n\n%s"
+    IDS_CLOUD_READY               "Enter the WebDAV and encryption details. Payloads are encrypted with AES-256-GCM."
+    IDS_CLOUD_NEED_PASSPHRASE     "Enter an encryption passphrase."
+    IDS_CLOUD_HTTP_WARNING        "Warning: HTTP does not protect the WebDAV password with TLS."
+    IDS_CLOUD_RESTORE_CANCELLED   "Restore cancelled."
+    IDS_CLOUD_URL_REQUIRED        "A WebDAV URL is required."
+    IDS_MGR_TITLE                 "Configuration Management"
+    IDS_MGR_SAVED                 "Settings saved."
+    IDS_MGR_DATA_FMT              "Application data: %s"
+    IDS_MGR_CLOUD_ERROR_FMT       "Last automatic cloud error: %s"
+    IDS_MGR_CLOUD_OK              "Automatic cloud backup: ready."
+    IDS_MGR_CLOUD_NOT_CONFIG      "Automatic cloud backup is not configured (WebDAV URL or credentials missing)."
+    IDS_CLOUD_HISTORY_TITLE       "Cloud Backups"
+    IDS_CLOUD_HISTORY_EMPTY       "(No encrypted cloud backups found.)"
+    IDS_CLOUD_HISTORY_ITEM_FMT    "%s  |  %s  |  %s  |  %s"
+    IDS_CLOUD_HISTORY_SELECT      "Select a cloud backup first."
+    IDS_CLOUD_HISTORY_LOAD_FAIL   "Cannot read the cloud backup list.\n\n%s"
+    IDS_CLOUD_HISTORY_RESTORE_FAIL "Cannot download or decrypt the selected backup.\n\n%s"
+    IDS_CLOUD_HISTORY_AUTO        "automatic"
+    IDS_CLOUD_HISTORY_MANUAL      "manual"
+    IDS_CLOUD_HISTORY_READY       "Select a backup and press Restore selected."
 END
 
 STRINGTABLE

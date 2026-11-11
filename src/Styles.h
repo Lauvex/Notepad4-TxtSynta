@@ -87,6 +87,7 @@ extern int np2StyleTheme;
 extern WCHAR darkStyleThemeFilePath[MAX_PATH];
 
 void	Style_ReleaseResources() noexcept;
+void	Style_EnsureThemeFiles() noexcept;
 void	Style_Load() noexcept;
 void	Style_Save() noexcept;
 void	Style_LoadAll(StyleLoadFlag loadFlag) noexcept;

@@ -43,6 +43,7 @@
 extern EDITLEXER lexGlobal;
 extern EDITLEXER lexTextFile;
 extern EDITLEXER lex2ndTextFile;
+extern EDITLEXER lexTxtSyntax;
 
 extern EDITLEXER lexCPP;
 extern EDITLEXER lexCSharp;
@@ -257,6 +258,7 @@ static PEDITLEXER pLexArray[] = {
 	&lexTcl,
 	&lexTexinfo,
 	&lexTOML,
+	&lexTxtSyntax,
 	&lexTypeScript,
 	&lexTypst,
 
@@ -654,14 +656,49 @@ static inline bool IsStyleLoaded(LPCEDITLEXER pLex) noexcept {
 	return pLex->iStyleTheme == np2StyleTheme && pLex->szStyleBuf != nullptr;
 }
 
-static inline LPCWSTR GetStyleThemeFilePath() noexcept {
-	return (np2StyleTheme == StyleTheme_Dark) ? darkStyleThemeFilePath : szIniFile;
+static inline void FindDarkThemeFile(LPWSTR path) noexcept {
+	lstrcpy(path, szIniFile);
+	lstrcpy(PathFindFileName(path), L"Notepad4 DarkTheme.ini");
 }
 
-static inline void FindDarkThemeFile(LPWSTR lpszIniFile) noexcept {
-	// relative to program ini file
-	lstrcpy(lpszIniFile, szIniFile);
-	lstrcpy(PathFindFileName(lpszIniFile), L"Notepad4 DarkTheme.ini");
+static WCHAR solarizedLightThemeFilePath[MAX_PATH]{};
+static WCHAR tangoWarmDarkThemeFilePath[MAX_PATH]{};
+static WCHAR gruvboxDarkThemeFilePath[MAX_PATH]{};
+static WCHAR gruvboxLightThemeFilePath[MAX_PATH]{};
+
+// Read each theme from its own INI; default stays in Notepad4.ini
+static inline LPCWSTR GetStyleThemeFilePath() noexcept {
+	switch (np2StyleTheme) {
+	case StyleTheme_Dark:
+		if (StrIsEmpty(darkStyleThemeFilePath)) { FindDarkThemeFile(darkStyleThemeFilePath); }
+		return darkStyleThemeFilePath;
+	case StyleTheme_SolarizedLight:
+		if (StrIsEmpty(solarizedLightThemeFilePath)) {
+			lstrcpy(solarizedLightThemeFilePath, szIniFile);
+			lstrcpy(PathFindFileName(solarizedLightThemeFilePath), L"Notepad4 Solarized Light.ini");
+		}
+		return solarizedLightThemeFilePath;
+	case StyleTheme_TangoWarmDark:
+		if (StrIsEmpty(tangoWarmDarkThemeFilePath)) {
+			lstrcpy(tangoWarmDarkThemeFilePath, szIniFile);
+			lstrcpy(PathFindFileName(tangoWarmDarkThemeFilePath), L"Notepad4 Tango Warm Dark.ini");
+		}
+		return tangoWarmDarkThemeFilePath;
+	case StyleTheme_GruvboxDark:
+		if (StrIsEmpty(gruvboxDarkThemeFilePath)) {
+			lstrcpy(gruvboxDarkThemeFilePath, szIniFile);
+			lstrcpy(PathFindFileName(gruvboxDarkThemeFilePath), L"Notepad4 Gruvbox Dark.ini");
+		}
+		return gruvboxDarkThemeFilePath;
+	case StyleTheme_GruvboxLight:
+		if (StrIsEmpty(gruvboxLightThemeFilePath)) {
+			lstrcpy(gruvboxLightThemeFilePath, szIniFile);
+			lstrcpy(PathFindFileName(gruvboxLightThemeFilePath), L"Notepad4 Gruvbox Light.ini");
+		}
+		return gruvboxLightThemeFilePath;
+	default:
+		return szIniFile;
+	}
 }
 
 void Style_LoadTabSettings(LPCEDITLEXER pLex) noexcept {
@@ -792,11 +829,61 @@ static int __cdecl CmpEditLexerByName(const void *p1, const void *p2) noexcept {
 	return cmp;
 }
 
+// Create missing per-theme INI files from the shipped templates, without ever
+// overwriting an existing user configuration.
+void Style_EnsureThemeFiles() noexcept {
+	static constexpr LPCWSTR themeNames[] = {
+		L"Notepad4 DarkTheme.ini",
+		L"Notepad4 Solarized Light.ini",
+		L"Notepad4 Tango Warm Dark.ini",
+		L"Notepad4 Gruvbox Dark.ini",
+		L"Notepad4 Gruvbox Light.ini",
+	};
+
+	WCHAR exeDir[MAX_PATH];
+	lstrcpynW(exeDir, szExeRealPath, COUNTOF(exeDir));
+	if (!PathRemoveFileSpecW(exeDir)) {
+		return;
+	}
+
+	WCHAR configDir[MAX_PATH];
+	lstrcpynW(configDir, szIniFile, COUNTOF(configDir));
+	if (!PathRemoveFileSpecW(configDir)) {
+		return;
+	}
+
+	for (LPCWSTR name : themeNames) {
+		WCHAR activePath[MAX_PATH];
+		lstrcpynW(activePath, configDir, COUNTOF(activePath));
+		if (lstrlenW(activePath) + lstrlenW(name) + 2 > COUNTOF(activePath)
+			|| !PathAppendW(activePath, name)) {
+			continue;
+		}
+		if (GetFileAttributesW(activePath) != INVALID_FILE_ATTRIBUTES) {
+			continue;
+		}
+
+		WCHAR templatePath[MAX_PATH];
+		lstrcpynW(templatePath, exeDir, COUNTOF(templatePath));
+		if (lstrlenW(templatePath) + lstrlenW(name) + CSTRLEN(L"-default") + 2 > COUNTOF(templatePath)
+			|| !PathAppendW(templatePath, name)
+			|| lstrlenW(templatePath) + CSTRLEN(L"-default") + 1 > COUNTOF(templatePath)) {
+			continue;
+		}
+		lstrcatW(templatePath, L"-default");
+		if (GetFileAttributesW(templatePath) == INVALID_FILE_ATTRIBUTES) {
+			continue;
+		}
+		CopyFileW(templatePath, activePath, TRUE);
+	}
+}
+
 //=============================================================================
 //
 // Style_Load()
 //
 void Style_Load() noexcept {
+	Style_EnsureThemeFiles();
 	IniSectionParser section;
 	if (g_AllFileExtensions == nullptr) {
 		g_AllFileExtensions = static_cast<LPWSTR>(NP2HeapAlloc(ALL_FILE_EXTENSIONS_BYTE_SIZE));
@@ -1691,12 +1778,12 @@ void Style_SetLexer(PEDITLEXER pLexNew, BOOL bLexerChanged) noexcept {
 		if (Style_StrGetForeColor(szValue, &rgb)) {
 			foreColor = rgb;
 		} else {
-			foreColor = (np2StyleTheme == StyleTheme_Dark) ? FoldingMarkerLineColorDark : FoldingMarkerLineColorDefault;
+			foreColor = (np2StyleTheme == StyleTheme_Dark || np2StyleTheme == StyleTheme_TangoWarmDark || np2StyleTheme == StyleTheme_GruvboxDark) ? FoldingMarkerLineColorDark : FoldingMarkerLineColorDefault;
 		}
 		if (Style_StrGetBackColor(szValue, &rgb)) {
 			fillColor = rgb;
 		} else {
-			fillColor = (np2StyleTheme == StyleTheme_Dark) ? FoldingMarkerFillColorDark : FoldingMarkerFillColorDefault;
+			fillColor = (np2StyleTheme == StyleTheme_Dark || np2StyleTheme == StyleTheme_TangoWarmDark || np2StyleTheme == StyleTheme_GruvboxDark) ? FoldingMarkerFillColorDark : FoldingMarkerFillColorDefault;
 		}
 
 		szValue = lexGlobal.GetStyleValue(GlobalStyleIndex_CodeFolding);
@@ -4247,7 +4334,7 @@ static INT_PTR CALLBACK Style_ConfigDlgProc(HWND hwnd, UINT umsg, WPARAM wParam,
 		ResizeDlg_InitY2(hwnd, &positionRecord.cxStyleCustomizeDlg, &positionRecord.cyStyleCustomizeDlg, controlDefinition, COUNTOF(controlDefinition) - 1, 50);
 
 		WCHAR szTitle[1024];
-		const UINT idsTitle = (np2StyleTheme == StyleTheme_Dark) ? IDS_CONFIG_THEME_TITLE_DARK : IDS_CONFIG_THEME_TITLE_DEFAULT;
+		const UINT idsTitle = (np2StyleTheme == StyleTheme_Dark || np2StyleTheme == StyleTheme_TangoWarmDark || np2StyleTheme == StyleTheme_GruvboxDark) ? IDS_CONFIG_THEME_TITLE_DARK : IDS_CONFIG_THEME_TITLE_DEFAULT;
 		GetString(idsTitle, szTitle, COUNTOF(szTitle));
 		SetWindowText(hwnd, szTitle);
 

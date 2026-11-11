@@ -20,6 +20,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include "compiler.h"
 
 template <typename T>
@@ -1183,6 +1184,8 @@ inline void GetProgramRealPath(LPWSTR tchModule, DWORD nSize) noexcept {
 
 // similar to std::filesystem::equivalent()
 bool PathEquivalent(LPCWSTR pszPath1, LPCWSTR pszPath2) noexcept;
+std::wstring GetNotepad4DataDirectory() noexcept;
+std::wstring GetNotepad4PrivateDataDirectory() noexcept;
 void PathRelativeToApp(LPCWSTR lpszSrc, LPWSTR lpszDest, DWORD dwAttrTo, BOOL bUnexpandMyDocs) noexcept;
 void PathAbsoluteFromApp(LPCWSTR lpszSrc, LPWSTR lpszDest) noexcept;
 bool PathGetLnkPath(LPCWSTR pszLnkFile, LPWSTR pszResPath);
